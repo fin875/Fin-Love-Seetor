@@ -275,6 +275,73 @@
     </div>
 
     <script>
+        // ==========================================
+        // 🛠️ Shared Utilities
+        // ==========================================
+
+        /** Reveal an element by removing transition classes after a delay */
+        function animateIn(elementId, classesToRemove = ['translate-y-8', 'opacity-0'], delay = 100, styles = null) {
+            setTimeout(() => {
+                const el = document.getElementById(elementId);
+                if (!el) return;
+                el.classList.remove(...classesToRemove);
+                if (styles) Object.assign(el.style, styles);
+            }, delay);
+        }
+
+        /** Play audio with silent error handling */
+        function safePlay(audioId) {
+            const audio = document.getElementById(audioId);
+            if (audio) audio.play().catch(() => {});
+        }
+
+        /** Prime audio (play, pause, reset) so it's ready for instant playback */
+        function primeAudio(audioId) {
+            const audio = document.getElementById(audioId);
+            if (!audio) return;
+            audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(() => {});
+        }
+
+        /** Safely cancel the grid gallery animation loop */
+        function stopGridAnimation() {
+            if (gridAnimationReq) {
+                cancelAnimationFrame(gridAnimationReq);
+                gridAnimationReq = null;
+            }
+        }
+
+        /** Show an element (remove hidden, then remove opacity-0 after a tick) */
+        function showElement(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.remove('opacity-0'), 50);
+        }
+
+        /** Hide an element (add opacity-0, then add hidden) */
+        function hideElement(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            el.classList.add('hidden', 'opacity-0');
+        }
+
+        // ==========================================
+        // 🖼️ SVG Icon Templates
+        // ==========================================
+
+        const SVG_HEART = `<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>`;
+        const SVG_ARROW_RIGHT = `<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>`;
+        const SVG_CHEVRON_LEFT = `<path d="m15 18-6-6 6-6"/>`;
+
+        /** Create an SVG icon string with given inner content and optional classes */
+        function svgIcon(content, extraClass = '') {
+            return `<svg class="${extraClass}" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${content}</svg>`;
+        }
+
+        // ==========================================
+        // 📦 Configuration
+        // ==========================================
+
         const BASE_IMAGES = [
             "https://i.postimg.cc/Bt9WPpGV/Screenshot-20260602-173055-com-hihonor-photos-Gallery-Main-edit-569263349098830.jpg",
             "https://i.postimg.cc/wvwTNSWr/IMG-20260601-185653.png",
@@ -348,15 +415,12 @@
             let nextId = `step-${step}`;
             if (step === 3 || step === 5 || step === 7 || step === 9) nextId = 'step-warp';
 
-            if (currentScreenId === 'step-4' && gridAnimationReq) {
-                cancelAnimationFrame(gridAnimationReq);
-                gridAnimationReq = null; 
-            }
+            stopGridAnimation();
 
             switchScreen(currentScreenId, nextId);
 
             if (step === 1) runIntroSequence();
-            if (step === 2) setTimeout(() => document.getElementById('login-card').classList.remove('translate-y-8', 'opacity-0'), 100);
+            if (step === 2) animateIn('login-card');
             if (step === 3 || step === 5 || step === 7 || step === 9) runWarpTransition(step + 1, false);
             if (step === 4) initGridGallery();
             if (step === 6) initJigsaw();
@@ -366,17 +430,13 @@
 
         function goBackFrom(currentStepNum) {
             const targetStep = currentStepNum - 2; 
-            if (currentScreenId === 'step-4' && gridAnimationReq) {
-                cancelAnimationFrame(gridAnimationReq);
-                gridAnimationReq = null;
-            }
+            stopGridAnimation();
             switchScreen(currentScreenId, 'step-warp');
             runWarpTransition(targetStep, true); 
         }
 
         function startApp() {
-            const mAudio = document.getElementById("main-audio");
-            mAudio.play().then(() => { mAudio.pause(); mAudio.currentTime = 0; }).catch(()=>{});
+            primeAudio('main-audio');
             goToStep(1);
         }
 
@@ -388,8 +448,7 @@
                     if(i > 0) { const prevEl = document.getElementById(elems[i-1]); prevEl.classList.remove('show'); prevEl.classList.add('hide'); }
                     document.getElementById(id).classList.add('show');
                     if(i === 3) {
-                        const mAudio = document.getElementById("main-audio");
-                        mAudio.play().catch(()=>{});
+                        safePlay('main-audio');
                         setTimeout(() => goToStep(2), 3500);
                     }
                 }, times[i]);
@@ -401,8 +460,7 @@
             if (input === TARGET_DATE) {
                 document.getElementById('date-error').classList.add('hidden');
                 document.getElementById('login-form').classList.add('opacity-0', 'pointer-events-none');
-                const mAudio = document.getElementById("main-audio");
-                if (mAudio.paused) mAudio.play().catch(()=>{});
+                if (document.getElementById('main-audio').paused) safePlay('main-audio');
                 setTimeout(() => {
                     document.getElementById('login-form').style.display = 'none';
                     const loading = document.getElementById('login-loading');
@@ -502,18 +560,18 @@
         let jigsawMoveCount = 0;
 
         function initJigsaw() {
-            setTimeout(() => document.getElementById('jigsaw-container').classList.remove('translate-y-8', 'opacity-0'), 100);
+            animateIn('jigsaw-container');
             
             jigsawTiles = [0, 1, 2, 3, 4, 5, 6, 7, 8]; 
             jigsawSolved = false;
             jigsawMoveCount = 0;
             
-            document.getElementById('jigsaw-skip-btn').classList.add('hidden');
+            hideElement('jigsaw-skip-btn');
             const nextBtn = document.getElementById('jigsaw-next-btn');
             nextBtn.classList.add('hidden');
             nextBtn.classList.remove('flex');
             nextBtn.disabled = false; 
-            document.getElementById('jigsaw-success').classList.add('hidden', 'opacity-0');
+            hideElement('jigsaw-success');
 
             const board = document.getElementById('jigsaw-board');
             board.innerHTML = '';
@@ -580,7 +638,7 @@
                 
                 jigsawMoveCount++;
                 if (jigsawMoveCount >= 5 && !jigsawSolved) {
-                    document.getElementById('jigsaw-skip-btn').classList.remove('hidden');
+                    showElement('jigsaw-skip-btn');
                 }
                 checkJigsawWin();
             }
@@ -589,14 +647,14 @@
         function skipJigsaw() {
             jigsawTiles = [0, 1, 2, 3, 4, 5, 6, 7, 8];
             updateJigsawDOM();
-            document.getElementById('jigsaw-skip-btn').classList.add('hidden');
+            hideElement('jigsaw-skip-btn');
             setTimeout(checkJigsawWin, 300);
         }
 
         function checkJigsawWin() {
             if (jigsawTiles.every((val, i) => val === i)) {
                 jigsawSolved = true;
-                document.getElementById('jigsaw-skip-btn').classList.add('hidden');
+                hideElement('jigsaw-skip-btn');
                 
                 const emptyPiece = document.getElementById('empty-jigsaw-piece');
                 emptyPiece.style.opacity = '1';
@@ -605,9 +663,7 @@
                 emptyPiece.style.backgroundPosition = `100% 100%`;
 
                 setTimeout(() => {
-                    const success = document.getElementById('jigsaw-success');
-                    success.classList.remove('hidden');
-                    setTimeout(()=>success.classList.remove('opacity-0'), 50);
+                    showElement('jigsaw-success');
                     const btn = document.getElementById('jigsaw-next-btn');
                     btn.classList.remove('hidden'); btn.classList.add('flex');
                 }, 600); 
@@ -641,14 +697,7 @@
             const toFlowerBtn = document.getElementById('to-flower-btn');
             if(toFlowerBtn) toFlowerBtn.disabled = false; 
             
-            setTimeout(() => { 
-                const card = document.getElementById('signature-card');
-                if(card) {
-                    card.classList.remove('translate-y-12', 'opacity-0'); 
-                    card.style.opacity = '1';
-                    card.style.transform = 'translateY(0)';
-                }
-            }, 100);
+            animateIn('signature-card', ['translate-y-12', 'opacity-0'], 100, { opacity: '1', transform: 'translateY(0)' });
             
             if (signatureInitialized) return; 
             buildColorPalette();
@@ -794,8 +843,7 @@
         }
 
         function goToFlower() {
-            const fAudio = document.getElementById("flower-audio");
-            fAudio.play().then(()=>{ fAudio.pause(); fAudio.currentTime = 0; }).catch(()=>{});
+            primeAudio('flower-audio');
             goToStep(9);
         }
 
@@ -911,10 +959,10 @@
         // 🌟 Flower Page
         // ==========================================
         function initFlowerPage() {
-            document.getElementById("main-audio").pause();
-            const fAudio = document.getElementById("flower-audio");
+            document.getElementById('main-audio').pause();
+            const fAudio = document.getElementById('flower-audio');
             fAudio.currentTime = 0; 
-            fAudio.play().catch(()=>{}); 
+            safePlay('flower-audio');
             fAudio.onended = () => showRestart();
 
             const step10 = document.getElementById('step-10');
@@ -923,8 +971,7 @@
             const titleEl = document.getElementById('flower-title');
             titleEl.innerText = ""; 
 
-            const restartBtn = document.getElementById('restart-btn');
-            restartBtn.classList.add('hidden', 'opacity-0');
+            hideElement('restart-btn');
 
             if(flowerTypeTimeout) clearTimeout(flowerTypeTimeout);
 
@@ -942,8 +989,7 @@
         }
 
         function showRestart() {
-            const btn = document.getElementById('restart-btn');
-            btn.classList.remove('hidden'); setTimeout(() => btn.classList.remove('opacity-0'), 50);
+            showElement('restart-btn');
         }
     </script>
 </body>
