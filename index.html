@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https://i.postimg.cc https://img2.pic.in.th data: blob:; media-src https://*.edgeone.app; connect-src 'self';">
     <title>Our Memory</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -286,7 +290,7 @@
         ];
         const JIGSAW_IMG = "https://i.postimg.cc/Bt9WPpGV/Screenshot-20260602-173055-com-hihonor-photos-Gallery-Main-edit-569263349098830.jpg";
         const GALLERY_IMAGES = Array.from({ length: 150 }).map((_, i) => BASE_IMAGES[i % BASE_IMAGES.length]);
-        const TARGET_DATE = "2026-05-07";
+        const TARGET_DATE_HASH = "6e64e76521e38239ff08105bf265bc4da7621b4285cb7ba8152d79a19165ab97";
 
         let currentScreenId = 'step-0';
         let gridAnimationReq = null;
@@ -396,9 +400,17 @@
             });
         }
 
-        function checkDate() {
+        async function hashValue(val) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(val);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function checkDate() {
             const input = document.getElementById('date-input').value;
-            if (input === TARGET_DATE) {
+            const inputHash = await hashValue(input);
+            if (inputHash === TARGET_DATE_HASH) {
                 document.getElementById('date-error').classList.add('hidden');
                 document.getElementById('login-form').classList.add('opacity-0', 'pointer-events-none');
                 const mAudio = document.getElementById("main-audio");
