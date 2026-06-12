@@ -337,10 +337,12 @@
             const oldEl = document.getElementById(oldId);
             const newEl = document.getElementById(newId);
             if (oldEl) { oldEl.style.opacity = '0'; setTimeout(() => { oldEl.style.display = 'none'; }, 1000); }
+            else { console.warn('switchScreen: element not found for oldId:', oldId); }
             if (newEl) {
                 if(newId === 'step-warp') newEl.style.zIndex = '50'; else newEl.style.zIndex = '10';
                 newEl.style.display = 'flex'; void newEl.offsetWidth; newEl.style.opacity = '1';
             }
+            else { console.warn('switchScreen: element not found for newId:', newId); }
             currentScreenId = newId;
         }
 
@@ -376,7 +378,7 @@
 
         function startApp() {
             const mAudio = document.getElementById("main-audio");
-            mAudio.play().then(() => { mAudio.pause(); mAudio.currentTime = 0; }).catch(()=>{});
+            mAudio.play().then(() => { mAudio.pause(); mAudio.currentTime = 0; }).catch(e => console.warn('Audio priming failed in startApp:', e.message));
             goToStep(1);
         }
 
@@ -389,7 +391,7 @@
                     document.getElementById(id).classList.add('show');
                     if(i === 3) {
                         const mAudio = document.getElementById("main-audio");
-                        mAudio.play().catch(()=>{});
+                        mAudio.play().catch(e => console.warn('Audio playback failed in intro sequence:', e.message));
                         setTimeout(() => goToStep(2), 3500);
                     }
                 }, times[i]);
@@ -402,7 +404,7 @@
                 document.getElementById('date-error').classList.add('hidden');
                 document.getElementById('login-form').classList.add('opacity-0', 'pointer-events-none');
                 const mAudio = document.getElementById("main-audio");
-                if (mAudio.paused) mAudio.play().catch(()=>{});
+                if (mAudio.paused) mAudio.play().catch(e => console.warn('Audio playback failed in checkDate:', e.message));
                 setTimeout(() => {
                     document.getElementById('login-form').style.display = 'none';
                     const loading = document.getElementById('login-loading');
@@ -451,7 +453,9 @@
 
                 osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); 
                 osc.stop(audioCtx.currentTime + 3.5);
-            } catch (e) {}
+            } catch (e) {
+                console.warn('Warp transition audio setup failed:', e.message);
+            }
 
             const canvas = document.getElementById('warp-canvas');
             const ctx = canvas.getContext('2d');
@@ -700,7 +704,9 @@
                 }, 500); 
 
                 signatureInitialized = true;
-            } catch(e) {}
+            } catch(e) {
+                console.error('Signature canvas initialization failed:', e.message);
+            }
         }
 
         function setBrush(type) {
@@ -795,7 +801,7 @@
 
         function goToFlower() {
             const fAudio = document.getElementById("flower-audio");
-            fAudio.play().then(()=>{ fAudio.pause(); fAudio.currentTime = 0; }).catch(()=>{});
+            fAudio.play().then(()=>{ fAudio.pause(); fAudio.currentTime = 0; }).catch(e => console.warn('Flower audio priming failed:', e.message));
             goToStep(9);
         }
 
@@ -820,6 +826,11 @@
                 const img = document.createElement('img');
                 img.src = imgSrc;
                 img.className = "w-full h-full object-cover block aspect-square";
+                img.onerror = function() {
+                    this.style.display = 'none';
+                    div.style.background = 'linear-gradient(135deg, #1a1a2e, #16213e)';
+                    console.warn('Gallery image failed to load:', imgSrc);
+                };
                 
                 div.appendChild(img); container.appendChild(div);
                 items.push({ el: div, col: i % COLS, row: Math.floor(i / COLS), src: imgSrc });
@@ -914,7 +925,7 @@
             document.getElementById("main-audio").pause();
             const fAudio = document.getElementById("flower-audio");
             fAudio.currentTime = 0; 
-            fAudio.play().catch(()=>{}); 
+            fAudio.play().catch(e => console.warn('Flower audio playback failed:', e.message)); 
             fAudio.onended = () => showRestart();
 
             const step10 = document.getElementById('step-10');
